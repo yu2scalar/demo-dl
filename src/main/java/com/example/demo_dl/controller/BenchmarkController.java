@@ -26,7 +26,7 @@ public class BenchmarkController {
      * POST /api/benchmark/run
      *
      * Tests contract performance with configurable:
-     * - Thread count (concurrency level)
+     * - Thread counts (concurrency levels) - supports multiple thread configurations
      * - Asset pool sizes (contention levels)
      * - Duration-based testing (not request count)
      * - Latency percentiles (p50, p95, p99)
@@ -36,7 +36,7 @@ public class BenchmarkController {
      * {
      *   "contractId": "UserUpdaterV1_0_0",
      *   "baseArgument": "{\"userName\":\"user_{assetId}\",\"userAddress\":\"addr\",\"email\":\"test@example.com\",\"phoneNo\":\"123\"}",
-     *   "threads": 32,
+     *   "threads": [16, 32, 64],
      *   "assets": [1, 2, 4, 8, 16, 32, 64],
      *   "durationSeconds": 60,
      *   "rampUpSeconds": 10,
@@ -45,7 +45,7 @@ public class BenchmarkController {
      * }
      *
      * @param request benchmark configuration
-     * @return list of benchmark results (one per asset pool size)
+     * @return list of benchmark results (one per thread/asset combination)
      */
     @PostMapping("/run")
     public ApiResponse<List<BenchmarkResponse>> runBenchmark(@RequestBody BenchmarkRequest request) {

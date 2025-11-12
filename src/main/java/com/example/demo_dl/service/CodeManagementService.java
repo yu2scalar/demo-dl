@@ -39,6 +39,10 @@ public class CodeManagementService {
         String versionedName = VersionUtil.getVersionedName(
             definition.getName(), definition.getVersion());
 
+        // Ensure directories exist
+        Files.createDirectories(Paths.get(DEFINITIONS_CONTRACTS_DIR));
+        Files.createDirectories(Paths.get(GENERATED_CONTRACTS_DIR));
+
         // Save definition as JSON with versioned name
         String definitionPath = DEFINITIONS_CONTRACTS_DIR + "/" + versionedName + ".json";
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(new File(definitionPath), definition);
@@ -58,6 +62,10 @@ public class CodeManagementService {
     public void saveFunction(FunctionDefinition definition, String generatedCode) throws IOException {
         String versionedName = VersionUtil.getVersionedName(
             definition.getName(), definition.getVersion());
+
+        // Ensure directories exist
+        Files.createDirectories(Paths.get(DEFINITIONS_FUNCTIONS_DIR));
+        Files.createDirectories(Paths.get(GENERATED_FUNCTIONS_DIR));
 
         // Save definition as JSON with versioned name
         String definitionPath = DEFINITIONS_FUNCTIONS_DIR + "/" + versionedName + ".json";

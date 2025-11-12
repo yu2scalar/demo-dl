@@ -6,12 +6,13 @@ The enhanced benchmark system provides comprehensive performance testing for Sca
 
 ## Key Features
 
-- **Multi-threaded execution**: Configurable concurrent threads (1-256)
+- **Multi-threaded execution**: Configurable concurrent threads (1-256) - **supports multiple thread counts per test**
 - **Asset pool testing**: Test different contention levels by varying asset counts
 - **Duration-based testing**: Run for specified time periods instead of request counts
 - **Detailed metrics**: Latency percentiles (p50, p95, p99), throughput, error breakdown
-- **CSV export**: Automatic export of results for analysis
+- **CSV export**: Automatic export of results for analysis (one CSV per thread count)
 - **Ramp-up support**: Gradual thread spawning to stabilize initial conditions
+- **Comprehensive testing**: Run threads × assets combinations in a single request
 
 ## Key Concept: Assets vs Threads
 
@@ -30,14 +31,14 @@ threads=32, assets=64  → Low contention (2 assets per thread)
 ### Option 1: Shell Script (Recommended)
 
 ```bash
-# Default configuration (threads=32, assets=1,2,4,8,16,32,64)
+# Default configuration (threads=[32], assets=1,2,4,8,16,32,64)
 ./run-benchmark.sh
 
-# Custom configuration
-./run-benchmark.sh --threads 64 --duration 120 --assets "1,4,16,64"
+# Test with multiple thread counts
+./run-benchmark.sh --threads "16,32,64" --duration 120 --assets "1,4,16,64"
 
-# Test specific contract
-./run-benchmark.sh --contract MyContractV1_0_0 --threads 16 --duration 30
+# Test specific contract with multiple thread counts
+./run-benchmark.sh --contract MyContractV1_0_0 --threads "8,16,32" --duration 30
 
 # Show help
 ./run-benchmark.sh --help
@@ -45,7 +46,7 @@ threads=32, assets=64  → Low contention (2 assets per thread)
 
 **Script Options:**
 - `--contract CONTRACT_ID`: Contract to benchmark (default: UserUpdaterV1_0_0)
-- `--threads NUM`: Number of concurrent threads (default: 32)
+- `--threads NUMS`: Comma-separated thread counts to test (default: "32")
 - `--assets NUMS`: Comma-separated asset pool sizes (default: "1,2,4,8,16,32,64")
 - `--duration SEC`: Test duration in seconds (default: 60)
 - `--rampup SEC`: Ramp-up period in seconds (default: 10)
@@ -59,7 +60,7 @@ curl -X POST http://localhost:8080/api/benchmark/run \
   -d '{
   "contractId": "UserUpdaterV1_0_0",
   "baseArgument": "{\"userName\":\"user_{assetId}\",\"userAddress\":\"123 Main St\",\"email\":\"test@example.com\",\"phoneNo\":\"+1-555-0123\"}",
-  "threads": 32,
+  "threads": [16, 32, 64],
   "assets": [1, 2, 4, 8, 16, 32, 64],
   "durationSeconds": 60,
   "rampUpSeconds": 10,
@@ -74,9 +75,9 @@ curl -X POST http://localhost:8080/api/benchmark/run \
 |-----------|------|---------|-------------|
 | **contractId** | String | Required | Contract to benchmark |
 | **baseArgument** | String | Required | JSON template (use `{assetId}` placeholder) |
-| **threads** | Integer | 32 | Number of concurrent threads |
+| **threads** | List<Integer> | [32] | Thread counts to test (supports multiple) |
 | **assets** | List<Integer> | [1,2,4,8,16,32,64] | Asset pool sizes to test |
-| **durationSeconds** | Integer | 60 | Test duration per asset pool |
+| **durationSeconds** | Integer | 60 | Test duration per thread/asset combination |
 | **rampUpSeconds** | Integer | 10 | Gradual thread spawn period |
 | **exportCsv** | Boolean | true | Export results to CSV |
 | **csvOutputDirectory** | String | ./benchmark-results | CSV output directory |
@@ -151,26 +152,32 @@ errorTypes,testTimestamp
 
 ### 1. Quick Performance Check
 ```bash
-# Test with 16 threads for 30 seconds
-./run-benchmark.sh --threads 16 --duration 30 --assets "1,8,32"
+# Test with single thread count for 30 seconds
+./run-benchmark.sh --threads "16" --duration 30 --assets "1,8,32"
 ```
 
 ### 2. Comprehensive Contention Analysis
 ```bash
-# Full asset pool range to see contention impact
-./run-benchmark.sh --threads 32 --assets "1,2,4,8,16,32,64,128,256"
+# Test multiple thread counts to see scaling behavior
+./run-benchmark.sh --threads "8,16,32,64" --assets "1,2,4,8,16,32,64,128,256"
 ```
 
 ### 3. High-Load Stress Test
 ```bash
-# 128 threads for 5 minutes
-./run-benchmark.sh --threads 128 --duration 300 --assets "64,128,256"
+# Test high thread counts (produces 3 CSV files, one per thread count)
+./run-benchmark.sh --threads "64,128,256" --duration 300 --assets "64,128,256"
 ```
 
 ### 4. Low-Contention Baseline
 ```bash
-# Many assets, few threads = minimal contention
-./run-benchmark.sh --threads 16 --assets "256,512,1024"
+# Test scaling from low to high threads with many assets
+./run-benchmark.sh --threads "8,16,32,64" --assets "256,512,1024"
+```
+
+### 5. Thread Scaling Analysis
+```bash
+# Test how throughput scales with increasing threads
+./run-benchmark.sh --threads "1,2,4,8,16,32,64,128" --assets "64" --duration 30
 ```
 
 ## Understanding Results
