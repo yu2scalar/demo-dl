@@ -49,6 +49,44 @@ public class ContractController {
     }
 
     /**
+     * Register contract from compiled class file
+     * POST /api/contracts/register-compiled
+     *
+     * @param versionedClassName The versioned class name (e.g., "UserUpdaterV1_0_0")
+     * @param packageName The package name (e.g., "com.example.contracts")
+     */
+    @PostMapping("/register-compiled")
+    public ApiResponse<String> registerCompiledContract(
+            @RequestParam String versionedClassName,
+            @RequestParam String packageName) {
+        try {
+            // Build path to compiled class file
+            String classFilePath = System.getProperty("user.dir") + "/compiled/contracts/"
+                + packageName.replace(".", "/") + "/" + versionedClassName + ".class";
+
+            // Read class file
+            byte[] contractBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(classFilePath));
+
+            // Register with ScalarDL
+            String contractBinaryName = packageName + "." + versionedClassName;
+            scalarDLService.registerContract(
+                    versionedClassName,  // contractId
+                    contractBinaryName,   // contractBinaryName
+                    contractBytes,
+                    "{}"  // empty properties
+            );
+
+            return ApiResponse.success(
+                "Contract registered successfully: " + versionedClassName,
+                contractBinaryName
+            );
+        } catch (ClientException | IOException e) {
+            log.error("Failed to register compiled contract", e);
+            return ApiResponse.error("Failed to register contract: " + e.getMessage());
+        }
+    }
+
+    /**
      * Execute contract
      * POST /api/contracts/execute
      *

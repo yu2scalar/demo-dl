@@ -37,6 +37,9 @@ dependencies {
 	implementation 'io.hotmoka:toml4j:0.7.3'
 	implementation 'javax.json:javax.json-api:1.0'
 
+	// Annotation support for generated contracts
+	implementation 'javax.annotation:javax.annotation-api:1.3.2'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
