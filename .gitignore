@@ -45,3 +45,10 @@ cert/
 *.p12
 *.jks
 *.keystore
+
+### Generated Code ###
+# Keep definitions but ignore generated code
+generated/
+compiled/
+# Keep example definitions
+!examples/
