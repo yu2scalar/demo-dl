@@ -19,9 +19,9 @@ public class BenchmarkRequest {
     // Base argument template (use {assetId} placeholder for asset ID)
     private String baseArgument;
 
-    // Thread configuration
+    // Thread configurations to test (supports multiple thread counts)
     @Builder.Default
-    private Integer threads = 32;
+    private List<Integer> threads = List.of(32);
 
     // Asset pool sizes to test (tests contention levels)
     @Builder.Default

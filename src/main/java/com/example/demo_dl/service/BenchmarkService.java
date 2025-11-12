@@ -32,52 +32,65 @@ public class BenchmarkService {
     private final ScalarDLService scalarDLService;
 
     /**
-     * Execute full benchmark suite with multiple asset pool sizes
+     * Execute full benchmark suite with multiple thread counts and asset pool sizes
      *
      * @param request Benchmark configuration
-     * @return List of results for each asset pool size tested
+     * @return List of results for each thread/asset combination tested
      */
     public List<BenchmarkResponse> executeBenchmark(BenchmarkRequest request) throws Exception {
         List<BenchmarkResponse> allResults = new ArrayList<>();
         String suiteTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
 
-        log.info("Starting benchmark suite: contractId={}, threads={}, asset patterns={}",
+        log.info("Starting benchmark suite: contractId={}, thread patterns={}, asset patterns={}",
                 request.getContractId(), request.getThreads(), request.getAssets());
 
-        // Test each asset pool size
-        int totalPatterns = request.getAssets().size();
-        int currentPattern = 0;
+        // Calculate total tests
+        int totalTests = request.getThreads().size() * request.getAssets().size();
+        int currentTest = 0;
 
-        for (Integer assetCount : request.getAssets()) {
-            currentPattern++;
-            log.info("Testing with {} assets ({}/{})", assetCount, currentPattern, totalPatterns);
+        // Test each combination of thread count and asset pool size
+        for (Integer threadCount : request.getThreads()) {
+            for (Integer assetCount : request.getAssets()) {
+                currentTest++;
+                log.info("Testing with threads={}, assets={} ({}/{})",
+                        threadCount, assetCount, currentTest, totalTests);
 
-            // Run single test
-            BenchmarkResponse result = runSingleTest(request, assetCount);
-            allResults.add(result);
+                // Run single test
+                BenchmarkResponse result = runSingleTest(request, threadCount, assetCount);
+                allResults.add(result);
 
-            // Wait between tests (except after the last one)
-            if (currentPattern < totalPatterns) {
-                int delaySeconds = 5;
-                log.info("Waiting {} seconds before next test...", delaySeconds);
-                Thread.sleep(delaySeconds * 1000L);
+                // Wait between tests (except after the last one)
+                if (currentTest < totalTests) {
+                    int delaySeconds = 5;
+                    log.info("Waiting {} seconds before next test...", delaySeconds);
+                    Thread.sleep(delaySeconds * 1000L);
+                }
             }
         }
 
-        // Export all results to single CSV file
+        // Export all results to CSV file(s)
         if (Boolean.TRUE.equals(request.getExportCsv()) && !allResults.isEmpty()) {
-            String csvFileName = CsvExportUtil.exportMultipleToCsv(
-                    allResults,
-                    request.getCsvOutputDirectory(),
-                    request.getContractId(),
-                    request.getThreads(),
-                    suiteTimestamp
-            );
-            log.info("Exported all results to: {}", csvFileName);
+            // Group results by thread count for CSV export
+            for (Integer threadCount : request.getThreads()) {
+                List<BenchmarkResponse> threadResults = allResults.stream()
+                        .filter(r -> r.getThreads().equals(threadCount))
+                        .toList();
 
-            // Set CSV file name in all results
-            for (BenchmarkResponse result : allResults) {
-                result.setCsvFileName(csvFileName);
+                if (!threadResults.isEmpty()) {
+                    String csvFileName = CsvExportUtil.exportMultipleToCsv(
+                            threadResults,
+                            request.getCsvOutputDirectory(),
+                            request.getContractId(),
+                            threadCount,
+                            suiteTimestamp
+                    );
+                    log.info("Exported results for {} threads to: {}", threadCount, csvFileName);
+
+                    // Set CSV file name in results
+                    for (BenchmarkResponse result : threadResults) {
+                        result.setCsvFileName(csvFileName);
+                    }
+                }
             }
         }
 
@@ -88,27 +101,27 @@ public class BenchmarkService {
     /**
      * Run a single benchmark test with specified thread count and asset pool size
      */
-    private BenchmarkResponse runSingleTest(BenchmarkRequest request, int assetCount) throws InterruptedException {
+    private BenchmarkResponse runSingleTest(BenchmarkRequest request, int threadCount, int assetCount) throws InterruptedException {
         BenchmarkStatistics stats = new BenchmarkStatistics(
                 request.getContractId(),
-                request.getThreads(),
+                threadCount,
                 assetCount
         );
 
-        ExecutorService executorService = Executors.newFixedThreadPool(request.getThreads());
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
         AtomicBoolean running = new AtomicBoolean(false);
         AtomicInteger assetIdCounter = new AtomicInteger(0);
 
         log.info("Starting test: contract={}, threads={}, assets={}, duration={}s",
-                request.getContractId(), request.getThreads(), assetCount, request.getDurationSeconds());
+                request.getContractId(), threadCount, assetCount, request.getDurationSeconds());
 
         try {
             // Ramp-up phase: gradually spawn threads
             long rampUpIntervalMs = request.getRampUpSeconds() > 0
-                    ? (request.getRampUpSeconds() * 1000L) / request.getThreads()
+                    ? (request.getRampUpSeconds() * 1000L) / threadCount
                     : 0;
 
-            for (int i = 0; i < request.getThreads(); i++) {
+            for (int i = 0; i < threadCount; i++) {
                 final int threadIndex = i;
 
                 executorService.submit(() -> {
@@ -154,7 +167,7 @@ public class BenchmarkService {
                 });
 
                 // Ramp-up delay between thread spawns
-                if (i < request.getThreads() - 1 && rampUpIntervalMs > 0) {
+                if (i < threadCount - 1 && rampUpIntervalMs > 0) {
                     Thread.sleep(rampUpIntervalMs);
                 }
             }

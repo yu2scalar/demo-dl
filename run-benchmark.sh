@@ -8,7 +8,7 @@
 #
 # Options:
 #   --contract CONTRACT_ID     Contract to benchmark (default: UserUpdaterV1_0_0)
-#   --threads NUM              Number of threads (default: 32)
+#   --threads NUMS             Thread counts to test (default: "32")
 #   --assets NUMS              Asset pool sizes (default: "1,2,4,8,16,32,64")
 #   --duration SEC             Test duration in seconds (default: 60)
 #   --rampup SEC               Ramp-up period in seconds (default: 10)
@@ -20,16 +20,16 @@
 #   ./run-benchmark.sh
 #
 #   # Custom configuration
-#   ./run-benchmark.sh --threads 64 --duration 120 --assets "1,4,16,64"
+#   ./run-benchmark.sh --threads "16,32,64" --duration 120 --assets "1,4,16,64"
 #
-#   # Test specific contract
-#   ./run-benchmark.sh --contract MyContractV1_0_0 --threads 32
+#   # Test specific contract with multiple thread counts
+#   ./run-benchmark.sh --contract MyContractV1_0_0 --threads "16,32,64"
 #
 ################################################################################
 
 # Default values
 CONTRACT_ID="UserUpdaterV1_0_0"
-THREADS=32
+THREADS="32"
 ASSETS="1,2,4,8,16,32,64"
 DURATION=60
 RAMPUP=10
@@ -68,7 +68,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Options:"
             echo "  --contract CONTRACT_ID     Contract to benchmark (default: UserUpdaterV1_0_0)"
-            echo "  --threads NUM              Number of threads (default: 32)"
+            echo "  --threads NUMS             Thread counts to test (default: \"32\")"
             echo "  --assets NUMS              Asset pool sizes (default: \"1,2,4,8,16,32,64\")"
             echo "  --duration SEC             Test duration in seconds (default: 60)"
             echo "  --rampup SEC               Ramp-up period in seconds (default: 10)"
@@ -77,8 +77,8 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Examples:"
             echo "  ./run-benchmark.sh"
-            echo "  ./run-benchmark.sh --threads 64 --duration 120"
-            echo "  ./run-benchmark.sh --contract MyContractV1_0_0 --assets \"1,4,16\""
+            echo "  ./run-benchmark.sh --threads \"16,32,64\" --duration 120"
+            echo "  ./run-benchmark.sh --contract MyContractV1_0_0 --threads \"32,64\" --assets \"1,4,16\""
             exit 0
             ;;
         *)
@@ -89,8 +89,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Convert comma-separated assets to JSON array
+# Convert comma-separated values to JSON arrays
 # Example: "1,2,4" -> [1,2,4]
+THREADS_ARRAY="[${THREADS}]"
 ASSETS_ARRAY="[${ASSETS}]"
 
 # Prepare base argument based on contract
@@ -118,7 +119,7 @@ REQUEST_JSON=$(cat <<EOF
 {
   "contractId": "$CONTRACT_ID",
   "baseArgument": "$BASE_ARGUMENT",
-  "threads": $THREADS,
+  "threads": $THREADS_ARRAY,
   "assets": $ASSETS_ARRAY,
   "durationSeconds": $DURATION,
   "rampUpSeconds": $RAMPUP,
